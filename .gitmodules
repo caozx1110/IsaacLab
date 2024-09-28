@@ -1,0 +1,3 @@
+[submodule "source/isaaclab_exts"]
+	path = source/isaaclab_exts
+	url = git@github.com:caozx1110/isaaclab_exts.git

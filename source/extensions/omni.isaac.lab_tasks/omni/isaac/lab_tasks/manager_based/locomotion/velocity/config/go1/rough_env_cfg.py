@@ -46,7 +46,11 @@ class UnitreeGo1RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
                 "yaw": (0.0, 0.0),
             },
         }
-
+        
+        # observations
+        # remove the height scan
+        self.observations.policy.height_scan = None
+        
         # rewards
         self.rewards.feet_air_time.params["sensor_cfg"].body_names = ".*_foot"
         self.rewards.feet_air_time.weight = 0.01

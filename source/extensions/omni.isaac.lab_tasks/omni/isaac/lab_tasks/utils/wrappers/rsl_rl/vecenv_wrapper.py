@@ -57,10 +57,7 @@ class RslRlVecEnvWrapper(VecEnv):
         """
         # check that input is valid
         if not isinstance(env.unwrapped, ManagerBasedRLEnv) and not isinstance(env.unwrapped, DirectRLEnv):
-            raise ValueError(
-                "The environment must be inherited from ManagerBasedRLEnv or DirectRLEnv. Environment type:"
-                f" {type(env)}"
-            )
+            raise ValueError("The environment must be inherited from ManagerBasedRLEnv or DirectRLEnv. Environment type:" f" {type(env)}")
         # initialize the wrapper
         self.env = env
         # store information required by wrapper
@@ -73,13 +70,12 @@ class RslRlVecEnvWrapper(VecEnv):
             self.num_actions = gym.spaces.flatdim(self.unwrapped.single_action_space)
         if hasattr(self.unwrapped, "observation_manager"):
             self.num_obs = self.unwrapped.observation_manager.group_obs_dim["policy"][0]
+            # if hasattr(self.env, "history_length"):
+            #     self.num_obs *= self.env.get_attr('history_length')  # TEMP for history
         else:
             self.num_obs = gym.spaces.flatdim(self.unwrapped.single_observation_space["policy"])
         # -- privileged observations
-        if (
-            hasattr(self.unwrapped, "observation_manager")
-            and "critic" in self.unwrapped.observation_manager.group_obs_dim
-        ):
+        if hasattr(self.unwrapped, "observation_manager") and "critic" in self.unwrapped.observation_manager.group_obs_dim:
             self.num_privileged_obs = self.unwrapped.observation_manager.group_obs_dim["critic"][0]
         elif hasattr(self.unwrapped, "num_states") and "critic" in self.unwrapped.single_observation_space:
             self.num_privileged_obs = gym.spaces.flatdim(self.unwrapped.single_observation_space["critic"])
@@ -143,6 +139,11 @@ class RslRlVecEnvWrapper(VecEnv):
             obs_dict = self.unwrapped.observation_manager.compute()
         else:
             obs_dict = self.unwrapped._get_observations()
+
+        # TEMP: history as the policy observation
+        if hasattr(self.env, "history_length"):
+            obs_dict['policy'] = self.env._get_policy_obs()
+
         return obs_dict["policy"], {"observations": obs_dict}
 
     @property

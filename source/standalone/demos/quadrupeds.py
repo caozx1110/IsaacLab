@@ -46,6 +46,7 @@ from omni.isaac.lab.assets import Articulation
 from omni.isaac.lab_assets.anymal import ANYMAL_B_CFG, ANYMAL_C_CFG, ANYMAL_D_CFG  # isort:skip
 from omni.isaac.lab_assets.spot import SPOT_CFG  # isort:skip
 from omni.isaac.lab_assets.unitree import UNITREE_A1_CFG, UNITREE_GO1_CFG, UNITREE_GO2_CFG  # isort:skip
+from humanoid_rl.tasks.locomotion.velocity.config.g1.g1_assets import G1_CFG
 
 
 def define_origins(num_origins: int, spacing: float) -> list[list[float]]:
@@ -94,7 +95,7 @@ def design_scene() -> tuple[dict, list[list[float]]]:
     # Origin 4 with Unitree A1
     prim_utils.create_prim("/World/Origin4", "Xform", translation=origins[3])
     # -- Robot
-    unitree_a1 = Articulation(UNITREE_A1_CFG.replace(prim_path="/World/Origin4/Robot"))
+    unitree_a1 = Articulation(G1_CFG.replace(prim_path="/World/Origin4/Robot"))
 
     # Origin 5 with Unitree Go1
     prim_utils.create_prim("/World/Origin5", "Xform", translation=origins[4])

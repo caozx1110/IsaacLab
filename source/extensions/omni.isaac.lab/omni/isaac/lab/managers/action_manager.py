@@ -194,6 +194,7 @@ class ActionManager(ManagerBase):
         # create buffers to store actions
         self._action = torch.zeros((self.num_envs, self.total_action_dim), device=self.device)
         self._prev_action = torch.zeros_like(self._action)
+        self._prev_prev_action = torch.zeros_like(self._action)
 
         # check if any term has debug visualization implemented
         self.cfg.debug_vis = False
@@ -250,6 +251,11 @@ class ActionManager(ManagerBase):
         return self._prev_action
 
     @property
+    def prev_prev_action(self) -> torch.Tensor:
+        """The previous previous actions sent to the environment. Shape is (num_envs, total_action_dim)."""
+        return self._prev_prev_action
+
+    @property
     def has_debug_vis_implementation(self) -> bool:
         """Whether the command terms have debug visualization implemented."""
         # check if function raises NotImplementedError
@@ -288,6 +294,7 @@ class ActionManager(ManagerBase):
             env_ids = slice(None)
         # reset the action history
         self._prev_action[env_ids] = 0.0
+        self._prev_prev_action[env_ids] = 0.0
         self._action[env_ids] = 0.0
         # reset all action terms
         for term in self._terms.values():
@@ -308,6 +315,7 @@ class ActionManager(ManagerBase):
         if self.total_action_dim != action.shape[1]:
             raise ValueError(f"Invalid action shape, expected: {self.total_action_dim}, received: {action.shape[1]}.")
         # store the input actions
+        self._prev_prev_action[:] = self._prev_action
         self._prev_action[:] = self._action
         self._action[:] = action.to(self.device)
 
@@ -359,10 +367,7 @@ class ActionManager(ManagerBase):
                 continue
             # check valid type
             if not isinstance(term_cfg, ActionTermCfg):
-                raise TypeError(
-                    f"Configuration for the term '{term_name}' is not of type ActionTermCfg."
-                    f" Received: '{type(term_cfg)}'."
-                )
+                raise TypeError(f"Configuration for the term '{term_name}' is not of type ActionTermCfg." f" Received: '{type(term_cfg)}'.")
             # create the action term
             term = term_cfg.class_type(term_cfg, self._env)
             # sanity check if term is valid type

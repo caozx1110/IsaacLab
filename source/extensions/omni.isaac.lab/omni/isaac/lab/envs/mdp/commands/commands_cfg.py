@@ -59,6 +59,9 @@ class UniformVelocityCommandCfg(CommandTermCfg):
     This parameter is only used if :attr:`heading_command` is True.
     """
 
+    set_zero_less_than: float = 0.2
+    """Set the velocity to zero if the magnitude is less than this value."""
+
     @configclass
     class Ranges:
         """Uniform distribution ranges for the velocity commands."""
@@ -81,14 +84,10 @@ class UniformVelocityCommandCfg(CommandTermCfg):
     ranges: Ranges = MISSING
     """Distribution ranges for the velocity commands."""
 
-    goal_vel_visualizer_cfg: VisualizationMarkersCfg = GREEN_ARROW_X_MARKER_CFG.replace(
-        prim_path="/Visuals/Command/velocity_goal"
-    )
+    goal_vel_visualizer_cfg: VisualizationMarkersCfg = GREEN_ARROW_X_MARKER_CFG.replace(prim_path="/Visuals/Command/velocity_goal")
     """The configuration for the goal velocity visualization marker. Defaults to GREEN_ARROW_X_MARKER_CFG."""
 
-    current_vel_visualizer_cfg: VisualizationMarkersCfg = BLUE_ARROW_X_MARKER_CFG.replace(
-        prim_path="/Visuals/Command/velocity_current"
-    )
+    current_vel_visualizer_cfg: VisualizationMarkersCfg = BLUE_ARROW_X_MARKER_CFG.replace(prim_path="/Visuals/Command/velocity_current")
     """The configuration for the current velocity visualization marker. Defaults to BLUE_ARROW_X_MARKER_CFG."""
 
     # Set the scale of the visualization markers to (0.5, 0.5, 0.5)
@@ -175,9 +174,7 @@ class UniformPoseCommandCfg(CommandTermCfg):
     goal_pose_visualizer_cfg: VisualizationMarkersCfg = FRAME_MARKER_CFG.replace(prim_path="/Visuals/Command/goal_pose")
     """The configuration for the goal pose visualization marker. Defaults to FRAME_MARKER_CFG."""
 
-    current_pose_visualizer_cfg: VisualizationMarkersCfg = FRAME_MARKER_CFG.replace(
-        prim_path="/Visuals/Command/body_pose"
-    )
+    current_pose_visualizer_cfg: VisualizationMarkersCfg = FRAME_MARKER_CFG.replace(prim_path="/Visuals/Command/body_pose")
     """The configuration for the current pose visualization marker. Defaults to FRAME_MARKER_CFG."""
 
     # Set the scale of the visualization markers to (0.1, 0.1, 0.1)
@@ -219,9 +216,7 @@ class UniformPose2dCommandCfg(CommandTermCfg):
     ranges: Ranges = MISSING
     """Distribution ranges for the position commands."""
 
-    goal_pose_visualizer_cfg: VisualizationMarkersCfg = GREEN_ARROW_X_MARKER_CFG.replace(
-        prim_path="/Visuals/Command/pose_goal"
-    )
+    goal_pose_visualizer_cfg: VisualizationMarkersCfg = GREEN_ARROW_X_MARKER_CFG.replace(prim_path="/Visuals/Command/pose_goal")
     """The configuration for the goal pose visualization marker. Defaults to GREEN_ARROW_X_MARKER_CFG."""
 
     # Set the scale of the visualization markers to (0.2, 0.2, 0.8)

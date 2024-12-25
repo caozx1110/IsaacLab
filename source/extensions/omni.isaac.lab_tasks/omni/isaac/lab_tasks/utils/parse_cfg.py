@@ -55,10 +55,7 @@ def load_cfg_from_registry(task_name: str, entry_point_key: str) -> dict | objec
     cfg_entry_point = gym.spec(task_name).kwargs.get(entry_point_key)
     # check if entry point exists
     if cfg_entry_point is None:
-        raise ValueError(
-            f"Could not find configuration for the environment: '{task_name}'."
-            f" Please check that the gym registry has the entry point: '{entry_point_key}'."
-        )
+        raise ValueError(f"Could not find configuration for the environment: '{task_name}'." f" Please check that the gym registry has the entry point: '{entry_point_key}'.")
     # parse the default config file
     if isinstance(cfg_entry_point, str) and cfg_entry_point.endswith(".yaml"):
         if os.path.exists(cfg_entry_point):
@@ -96,9 +93,7 @@ def load_cfg_from_registry(task_name: str, entry_point_key: str) -> dict | objec
     return cfg
 
 
-def parse_env_cfg(
-    task_name: str, device: str = "cuda:0", num_envs: int | None = None, use_fabric: bool | None = None
-) -> ManagerBasedRLEnvCfg | DirectRLEnvCfg:
+def parse_env_cfg(task_name: str, device: str = "cuda:0", num_envs: int | None = None, use_fabric: bool | None = None) -> ManagerBasedRLEnvCfg | DirectRLEnvCfg:
     """Parse configuration for an environment and override based on inputs.
 
     Args:
@@ -136,9 +131,7 @@ def parse_env_cfg(
     return cfg
 
 
-def get_checkpoint_path(
-    log_path: str, run_dir: str = ".*", checkpoint: str = ".*", other_dirs: list[str] = None, sort_alpha: bool = True
-) -> str:
+def get_checkpoint_path(log_path: str, run_dir: str = ".*", checkpoint: str = ".*", other_dirs: list[str] = None, sort_alpha: bool = True) -> str:
     """Get path to the model checkpoint in input directory.
 
     The checkpoint file is resolved as: ``<log_path>/<run_dir>/<*other_dirs>/<checkpoint>``, where the
@@ -169,9 +162,7 @@ def get_checkpoint_path(
     # check if runs present in directory
     try:
         # find all runs in the directory that math the regex expression
-        runs = [
-            os.path.join(log_path, run) for run in os.scandir(log_path) if run.is_dir() and re.match(run_dir, run.name)
-        ]
+        runs = [os.path.join(log_path, run) for run in os.scandir(log_path) if run.is_dir() and re.match(run_dir, run.name)]
         # sort matched runs by alphabetical order (latest run should be last)
         if sort_alpha:
             runs.sort()

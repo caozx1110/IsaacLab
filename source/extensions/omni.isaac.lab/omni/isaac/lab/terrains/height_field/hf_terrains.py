@@ -42,13 +42,11 @@ def random_uniform_terrain(difficulty: float, cfg: hf_terrains_cfg.HfRandomUnifo
     """
     # check parameters
     # -- horizontal scale
+    # print(cfg.size)
     if cfg.downsampled_scale is None:
         cfg.downsampled_scale = cfg.horizontal_scale
     elif cfg.downsampled_scale < cfg.horizontal_scale:
-        raise ValueError(
-            "Downsampled scale must be larger than or equal to the horizontal scale:"
-            f" {cfg.downsampled_scale} < {cfg.horizontal_scale}."
-        )
+        raise ValueError("Downsampled scale must be larger than or equal to the horizontal scale:" f" {cfg.downsampled_scale} < {cfg.horizontal_scale}.")
 
     # switch parameters to discrete units
     # -- horizontal scale
@@ -232,9 +230,7 @@ def discrete_obstacles_terrain(difficulty: float, cfg: hf_terrains_cfg.HfDiscret
         along the x and y axis, respectively.
     """
     # resolve terrain configuration
-    obs_height = cfg.obstacle_height_range[0] + difficulty * (
-        cfg.obstacle_height_range[1] - cfg.obstacle_height_range[0]
-    )
+    obs_height = cfg.obstacle_height_range[0] + difficulty * (cfg.obstacle_height_range[1] - cfg.obstacle_height_range[0])
 
     # switch parameters to discrete units
     # -- terrain
@@ -370,9 +366,7 @@ def stepping_stones_terrain(difficulty: float, cfg: hf_terrains_cfg.HfSteppingSt
     """
     # resolve terrain configuration
     stone_width = cfg.stone_width_range[1] - difficulty * (cfg.stone_width_range[1] - cfg.stone_width_range[0])
-    stone_distance = cfg.stone_distance_range[0] + difficulty * (
-        cfg.stone_distance_range[1] - cfg.stone_distance_range[0]
-    )
+    stone_distance = cfg.stone_distance_range[0] + difficulty * (cfg.stone_distance_range[1] - cfg.stone_distance_range[0])
 
     # switch parameters to discrete units
     # -- terrain
@@ -434,3 +428,80 @@ def stepping_stones_terrain(difficulty: float, cfg: hf_terrains_cfg.HfSteppingSt
     hf_raw[x1:x2, y1:y2] = 0
     # round off the heights to the nearest vertical step
     return np.rint(hf_raw).astype(np.int16)
+
+
+def generate_perlin_noise_2d(shape, res):
+    """Generate a 2D numpy array filled with perlin noise.
+
+    Args:
+        shape: The shape of the 2D numpy array to generate.
+        res: The resolution of the perlin noise.
+    """
+
+    def f(t):
+        return 6 * t**5 - 15 * t**4 + 10 * t**3
+
+    delta = (res[0] / shape[0], res[1] / shape[1])
+    d = (shape[0] // res[0], shape[1] // res[1])
+    grid = np.mgrid[0 : res[0] : delta[0], 0 : res[1] : delta[1]].transpose(1, 2, 0) % 1
+    # Gradients
+    angles = 2 * np.pi * np.random.rand(res[0] + 1, res[1] + 1)
+    gradients = np.dstack((np.cos(angles), np.sin(angles)))
+    g00 = gradients[0:-1, 0:-1].repeat(d[0], 0).repeat(d[1], 1)
+    g10 = gradients[1:, 0:-1].repeat(d[0], 0).repeat(d[1], 1)
+    g01 = gradients[0:-1, 1:].repeat(d[0], 0).repeat(d[1], 1)
+    g11 = gradients[1:, 1:].repeat(d[0], 0).repeat(d[1], 1)
+    # Ramps
+    n00 = np.sum(grid * g00, 2)
+    n10 = np.sum(np.dstack((grid[:, :, 0] - 1, grid[:, :, 1])) * g10, 2)
+    n01 = np.sum(np.dstack((grid[:, :, 0], grid[:, :, 1] - 1)) * g01, 2)
+    n11 = np.sum(np.dstack((grid[:, :, 0] - 1, grid[:, :, 1] - 1)) * g11, 2)
+    # Interpolation
+    t = f(grid)
+    n0 = n00 * (1 - t[:, :, 0]) + t[:, :, 0] * n10
+    n1 = n01 * (1 - t[:, :, 0]) + t[:, :, 0] * n11
+    return np.sqrt(2) * ((1 - t[:, :, 1]) * n0 + t[:, :, 1] * n1) * 0.5 + 0.5
+
+
+@height_field_to_mesh
+def random_fractal_terrain(difficulty: float, cfg: hf_terrains_cfg.HfRandomFractalTerrainCfg) -> np.ndarray:
+    """Generate a terrain with random fractal noise.
+
+    The terrain is a flat platform at the center of the terrain with random fractal noise. The fractal noise
+    is generated using Perlin noise. The noise is generated with a random fractal range and step.
+
+    .. image:: ../../_static/terrains/height_field/random_fractal_terrain.jpg
+       :width: 40%
+       :align: center
+
+    Args:
+        difficulty: The difficulty of the terrain. This is a value between 0 and 1.
+        cfg: The configuration for the terrain.
+
+    Returns:
+        The height field of the terrain as a 2D numpy array with discretized heights.
+        The shape of the array is (width, length), where width and length are the number of points
+        along the x and y axis, respectively.
+    """
+    # resolve terrain configuration
+    # print(cfg.size)
+    width_pixels = int(cfg.size[0] / cfg.horizontal_scale)
+    length_pixels = int(cfg.size[1] / cfg.horizontal_scale)
+    shape = (width_pixels, length_pixels)
+    x_scale = int(cfg.frequency * cfg.size[0])
+    y_scale = int(cfg.frequency * cfg.size[1])
+    res = (x_scale, y_scale)
+    assert shape[0] % res[0] == 0 and shape[1] % res[1] == 0, f"The shape must be a multiple of the resolution. cfg.size: {cfg.size}, shape: {shape}, res: {res}"
+
+    # generate fractal noise
+    amp = cfg.amplitude_range[0] + difficulty * (cfg.amplitude_range[1] - cfg.amplitude_range[0])
+    amp = int(amp / cfg.vertical_scale)
+    noise = np.zeros(shape)
+    for _ in range(cfg.octaves):
+        # print(shape, res)
+        noise += amp * generate_perlin_noise_2d(shape, res)
+        amp *= cfg.gain
+        res = (int(res[0] * cfg.lacunarity), int(res[1] * cfg.lacunarity))
+
+    # round off the heights to the nearest vertical step
+    return np.rint(noise).astype(np.int16)

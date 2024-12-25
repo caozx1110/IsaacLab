@@ -28,6 +28,8 @@ class HfTerrainBaseCfg(SubTerrainBaseCfg):
     slope_threshold: float | None = None
     """The slope threshold above which surfaces are made vertical. Defaults to None,
     in which case no correction is applied."""
+    use_default_scale: bool = True
+    """Whether to use the default scale for the terrain. Defaults to True."""
 
 
 """
@@ -165,3 +167,25 @@ class HfSteppingStonesTerrainCfg(HfTerrainBaseCfg):
     """The depth of the holes (negative obstacles). Defaults to -10.0."""
     platform_width: float = 1.0
     """The width of the square platform at the center of the terrain. Defaults to 1.0."""
+
+
+@configclass
+class HfRandomFractalTerrainCfg(HfTerrainBaseCfg):
+    """Configuration for a random fractal height field terrain."""
+
+    function = hf_terrains.random_fractal_terrain
+
+    frequency: int = 10
+    """The frequency of the fractal noise. Defaults to 10.0."""
+
+    octaves: int = 2
+    """The number of octaves for the fractal noise. Defaults to 2."""
+
+    lacunarity: float = 2.0
+    """The lacunarity of the fractal noise. Defaults to 2.0."""
+
+    gain: float = 0.25
+    """The gain of the fractal noise. Defaults to 0.25."""
+
+    amplitude_range: tuple[float, float] = MISSING
+    """The minimum and maximum amplitude of the fractal noise (in m)."""

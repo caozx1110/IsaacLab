@@ -113,12 +113,8 @@ class UniformVelocityCommand(CommandTerm):
         max_command_time = self.cfg.resampling_time_range[1]
         max_command_step = max_command_time / self._env.step_dt
         # logs data
-        self.metrics["error_vel_xy"] += (
-            torch.norm(self.vel_command_b[:, :2] - self.robot.data.root_lin_vel_b[:, :2], dim=-1) / max_command_step
-        )
-        self.metrics["error_vel_yaw"] += (
-            torch.abs(self.vel_command_b[:, 2] - self.robot.data.root_ang_vel_b[:, 2]) / max_command_step
-        )
+        self.metrics["error_vel_xy"] += torch.norm(self.vel_command_b[:, :2] - self.robot.data.root_lin_vel_b[:, :2], dim=-1) / max_command_step
+        self.metrics["error_vel_yaw"] += torch.abs(self.vel_command_b[:, 2] - self.robot.data.root_ang_vel_b[:, 2]) / max_command_step
 
     def _resample_command(self, env_ids: Sequence[int]):
         # sample velocity commands
@@ -129,6 +125,9 @@ class UniformVelocityCommand(CommandTerm):
         self.vel_command_b[env_ids, 1] = r.uniform_(*self.cfg.ranges.lin_vel_y)
         # -- ang vel yaw - rotation around z
         self.vel_command_b[env_ids, 2] = r.uniform_(*self.cfg.ranges.ang_vel_z)
+        # set zero when the magnitude is less than the threshold
+        self.vel_command_b[env_ids, :2] *= self.vel_command_b[env_ids, :2].norm(dim=1, keepdim=True) > self.cfg.set_zero_less_than
+
         # heading target
         if self.cfg.heading_command:
             self.heading_target[env_ids] = r.uniform_(*self.cfg.ranges.heading)
@@ -209,8 +208,9 @@ class UniformVelocityCommand(CommandTerm):
         zeros = torch.zeros_like(heading_angle)
         arrow_quat = math_utils.quat_from_euler_xyz(zeros, zeros, heading_angle)
         # convert everything back from base to world frame
-        base_quat_w = self.robot.data.root_quat_w
-        arrow_quat = math_utils.quat_mul(base_quat_w, arrow_quat)
+        base_quat_w = math_utils.yaw_quat(self.robot.data.root_quat_w)
+        arrow_quat = math_utils.quat_mul(math_utils.quat_inv(base_quat_w), arrow_quat)
+        # arrow_quat = math_utils.yaw_quat(arrow_quat)
 
         return arrow_scale, arrow_quat
 

@@ -35,18 +35,39 @@ ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
             border_width=1.0,
             holes=False,
         ),
-        "boxes": terrain_gen.MeshRandomGridTerrainCfg(
-            proportion=0.2, grid_width=0.45, grid_height_range=(0.05, 0.2), platform_width=2.0
-        ),
-        "random_rough": terrain_gen.HfRandomUniformTerrainCfg(
-            proportion=0.2, noise_range=(0.02, 0.10), noise_step=0.02, border_width=0.25
-        ),
-        "hf_pyramid_slope": terrain_gen.HfPyramidSlopedTerrainCfg(
-            proportion=0.1, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.25
-        ),
-        "hf_pyramid_slope_inv": terrain_gen.HfInvertedPyramidSlopedTerrainCfg(
-            proportion=0.1, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.25
-        ),
+        "boxes": terrain_gen.MeshRandomGridTerrainCfg(proportion=0.2, grid_width=0.45, grid_height_range=(0.05, 0.2), platform_width=2.0),
+        "random_rough": terrain_gen.HfRandomUniformTerrainCfg(proportion=0.2, noise_range=(0.02, 0.10), noise_step=0.02, border_width=0.25),
+        "hf_pyramid_slope": terrain_gen.HfPyramidSlopedTerrainCfg(proportion=0.1, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.25),
+        "hf_pyramid_slope_inv": terrain_gen.HfInvertedPyramidSlopedTerrainCfg(proportion=0.1, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.25),
     },
 )
 """Rough terrains configuration."""
+
+UNEVEN_TERRAINS_CFG = TerrainGeneratorCfg(
+    size=(8.0, 8.0),
+    border_width=20.0,
+    num_rows=10,
+    num_cols=40,
+    horizontal_scale=0.1,
+    vertical_scale=0.005,
+    slope_threshold=0.75,
+    use_cache=False,
+    sub_terrains={
+        # "plane": terrain_gen.MeshPlaneTerrainCfg(proportion=0.2),
+        # "fractal": terrain_gen.HfRandomFractalTerrainCfg(
+        #     proportion=0.2,
+        #     amplitude_range=(0.02, 0.10),
+        #     horizontal_scale=0.01,
+        #     vertical_scale=1 / 10000,
+        #     border_width=0.25,
+        #     use_default_scale=False,
+        # ),
+        # "wave": terrain_gen.HfWaveTerrainCfg(proportion=0.2, amplitude_range=(0.02, 0.10), num_waves=1, border_width=0.25),
+        "plane": terrain_gen.MeshPlaneTerrainCfg(proportion=0.5),
+        "boxes": terrain_gen.MeshRandomGridTerrainCfg(proportion=0.1, grid_width=0.45, grid_height_range=(0.05, 0.2), platform_width=2.0),
+        "random_rough": terrain_gen.HfRandomUniformTerrainCfg(proportion=0.1, noise_range=(0.02, 0.10), noise_step=0.02, border_width=0.25),
+        "hf_pyramid_slope": terrain_gen.HfPyramidSlopedTerrainCfg(proportion=0.2, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.25),
+        "hf_pyramid_slope_inv": terrain_gen.HfInvertedPyramidSlopedTerrainCfg(proportion=0.1, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.25),
+    },
+)
+"""Uneven terrains configuration."""

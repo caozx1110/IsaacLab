@@ -112,7 +112,7 @@ class TerrainGenerator:
             # size of all terrains
             sub_cfg.size = self.cfg.size
             # params for height field terrains
-            if isinstance(sub_cfg, HfTerrainBaseCfg):
+            if isinstance(sub_cfg, HfTerrainBaseCfg) and sub_cfg.use_default_scale:
                 sub_cfg.horizontal_scale = self.cfg.horizontal_scale
                 sub_cfg.vertical_scale = self.cfg.vertical_scale
                 sub_cfg.slope_threshold = self.cfg.slope_threshold

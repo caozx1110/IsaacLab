@@ -79,9 +79,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # override configurations with non-hydra CLI arguments
     agent_cfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)
     env_cfg.scene.num_envs = args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
-    agent_cfg.max_iterations = (
-        args_cli.max_iterations if args_cli.max_iterations is not None else agent_cfg.max_iterations
-    )
+    agent_cfg.max_iterations = args_cli.max_iterations if args_cli.max_iterations is not None else agent_cfg.max_iterations
 
     # set the environment seed
     # note: certain randomizations occur in the environment initialization so we set the seed here
@@ -122,8 +120,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         env = multi_agent_to_single_agent(env)
 
     # HistoryWrapper
-    env = HistoryWrapper(env, history_length=2)
-    
+    # env = HistoryWrapper(env, history_length=2)
+
     # wrap around environment for rsl-rl
     env = RslRlVecEnvWrapper(env)
 

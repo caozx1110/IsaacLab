@@ -144,7 +144,10 @@ class RewardManager(ManagerBase):
             # compute term's value
             value = term_cfg.func(self._env, **term_cfg.params) * term_cfg.weight * dt
             # update total reward
-            self._reward_buf += value
+            try:
+                self._reward_buf += value
+            except RuntimeError:
+                raise RuntimeError(f"Error in computing reward term '{name}'.")
             # update episodic sum
             self._episode_sums[name] += value
 
@@ -203,16 +206,10 @@ class RewardManager(ManagerBase):
                 continue
             # check for valid config type
             if not isinstance(term_cfg, RewardTermCfg):
-                raise TypeError(
-                    f"Configuration for the term '{term_name}' is not of type RewardTermCfg."
-                    f" Received: '{type(term_cfg)}'."
-                )
+                raise TypeError(f"Configuration for the term '{term_name}' is not of type RewardTermCfg." f" Received: '{type(term_cfg)}'.")
             # check for valid weight type
             if not isinstance(term_cfg.weight, (float, int)):
-                raise TypeError(
-                    f"Weight for the term '{term_name}' is not of type float or int."
-                    f" Received: '{type(term_cfg.weight)}'."
-                )
+                raise TypeError(f"Weight for the term '{term_name}' is not of type float or int." f" Received: '{type(term_cfg.weight)}'.")
             # resolve common parameters
             self._resolve_common_term_cfg(term_name, term_cfg, min_argc=1)
             # add function to list

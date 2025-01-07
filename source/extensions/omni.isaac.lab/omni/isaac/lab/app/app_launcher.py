@@ -404,24 +404,15 @@ class AppLauncher:
         livestream_valid_vals = {0, 1, 2}
         # Value checking on LIVESTREAM
         if livestream_env not in livestream_valid_vals:
-            raise ValueError(
-                f"Invalid value for environment variable `LIVESTREAM`: {livestream_env} ."
-                f" Expected: {livestream_valid_vals}."
-            )
+            raise ValueError(f"Invalid value for environment variable `LIVESTREAM`: {livestream_env} ." f" Expected: {livestream_valid_vals}.")
         # We allow livestream kwarg to supersede LIVESTREAM envvar
         if livestream_arg >= 0:
             if livestream_arg in livestream_valid_vals:
                 self._livestream = livestream_arg
                 # print info that we overrode the env-var
-                print(
-                    f"[INFO][AppLauncher]: Input keyword argument `livestream={livestream_arg}` has overridden"
-                    f" the environment variable `LIVESTREAM={livestream_env}`."
-                )
+                print(f"[INFO][AppLauncher]: Input keyword argument `livestream={livestream_arg}` has overridden" f" the environment variable `LIVESTREAM={livestream_env}`.")
             else:
-                raise ValueError(
-                    f"Invalid value for input keyword argument `livestream`: {livestream_arg} ."
-                    f" Expected: {livestream_valid_vals}."
-                )
+                raise ValueError(f"Invalid value for input keyword argument `livestream`: {livestream_arg} ." f" Expected: {livestream_valid_vals}.")
         else:
             self._livestream = livestream_env
 
@@ -435,9 +426,7 @@ class AppLauncher:
         headless_valid_vals = {0, 1}
         # Value checking on HEADLESS
         if headless_env not in headless_valid_vals:
-            raise ValueError(
-                f"Invalid value for environment variable `HEADLESS`: {headless_env} . Expected: {headless_valid_vals}."
-            )
+            raise ValueError(f"Invalid value for environment variable `HEADLESS`: {headless_env} . Expected: {headless_valid_vals}.")
         # We allow headless kwarg to supersede HEADLESS envvar if headless_arg does not have the default value
         # Note: Headless is always true when livestreaming
         if headless_arg is True:
@@ -468,10 +457,7 @@ class AppLauncher:
         enable_cameras_arg = launcher_args.pop("enable_cameras", AppLauncher._APPLAUNCHER_CFG_INFO["enable_cameras"][1])
         enable_cameras_valid_vals = {0, 1}
         if enable_cameras_env not in enable_cameras_valid_vals:
-            raise ValueError(
-                f"Invalid value for environment variable `ENABLE_CAMERAS`: {enable_cameras_env} ."
-                f"Expected: {enable_cameras_valid_vals} ."
-            )
+            raise ValueError(f"Invalid value for environment variable `ENABLE_CAMERAS`: {enable_cameras_env} ." f"Expected: {enable_cameras_valid_vals} .")
         # We allow enable_cameras kwarg to supersede ENABLE_CAMERAS envvar
         if enable_cameras_arg is True:
             self._enable_cameras = enable_cameras_arg
@@ -497,10 +483,7 @@ class AppLauncher:
         self.device_id = 0
         device = launcher_args.get("device", AppLauncher._APPLAUNCHER_CFG_INFO["device"][1])
         if "cuda" not in device and "cpu" not in device:
-            raise ValueError(
-                f"Invalid value for input keyword argument `device`: {device}."
-                " Expected: a string with the format 'cuda', 'cuda:<device_id>', or 'cpu'."
-            )
+            raise ValueError(f"Invalid value for input keyword argument `device`: {device}." " Expected: a string with the format 'cuda', 'cuda:<device_id>', or 'cpu'.")
         if "cuda:" in device:
             self.device_id = int(device.split(":")[-1])
 
@@ -541,9 +524,7 @@ class AppLauncher:
             # check if the headless flag is setS
             if self._enable_cameras:
                 if self._headless and not self._livestream:
-                    self._sim_experience_file = os.path.join(
-                        isaaclab_app_exp_path, "isaaclab.python.headless.rendering.kit"
-                    )
+                    self._sim_experience_file = os.path.join(isaaclab_app_exp_path, "isaaclab.python.headless.rendering.kit")
                 else:
                     self._sim_experience_file = os.path.join(isaaclab_app_exp_path, "isaaclab.python.rendering.kit")
             elif self._headless and not self._livestream:
@@ -565,10 +546,7 @@ class AppLauncher:
                     f"\n\t [2]: {option_2_app_exp_path}"
                 )
         elif not os.path.exists(self._sim_experience_file):
-            raise FileNotFoundError(
-                f"Invalid value for input keyword argument `experience`: {self._sim_experience_file}."
-                " The file does not exist."
-            )
+            raise FileNotFoundError(f"Invalid value for input keyword argument `experience`: {self._sim_experience_file}." " The file does not exist.")
 
         # Resolve additional arguments passed to Kit
         self._kit_args = []
@@ -581,9 +559,7 @@ class AppLauncher:
         print(f"[INFO][AppLauncher]: Loading experience file: {self._sim_experience_file}")
         # Remove all values from input keyword args which are not meant for SimulationApp
         # Assign all the passed settings to a dictionary for the simulation app
-        self._sim_app_config = {
-            key: launcher_args[key] for key in set(AppLauncher._SIM_APP_CFG_TYPES.keys()) & set(launcher_args.keys())
-        }
+        self._sim_app_config = {key: launcher_args[key] for key in set(AppLauncher._SIM_APP_CFG_TYPES.keys()) & set(launcher_args.keys())}
 
     def _create_app(self):
         """Launch and create the SimulationApp based on the parsed simulation config."""
@@ -681,7 +657,7 @@ class AppLauncher:
         # set the nucleus directory manually to the latest published Nucleus
         # note: this is done to ensure prior versions of Isaac Sim still use the latest assets
         assets_path = "http://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.1"
-        assets_path = "/workspace/isaaclab/isaac-sim-assets-4.1.0/Assets/Isaac/4.0/"
+        assets_path = "/datasdc1/home/czx/Downloads/isaac-sim-assets-4.1.0/Assets/Isaac/4.0/"
         carb_settings_iface.set_string("/persistent/isaac/asset_root/default", assets_path)
         carb_settings_iface.set_string("/persistent/isaac/asset_root/cloud", assets_path)
         carb_settings_iface.set_string("/persistent/isaac/asset_root/nvidia", assets_path)

@@ -60,10 +60,7 @@ class UniformVelocityCommand(CommandTerm):
 
         # check configuration
         if self.cfg.heading_command and self.cfg.ranges.heading is None:
-            raise ValueError(
-                "The velocity command has heading commands active (heading_command=True) but the `ranges.heading`"
-                " parameter is set to None."
-            )
+            raise ValueError("The velocity command has heading commands active (heading_command=True) but the `ranges.heading`" " parameter is set to None.")
         if self.cfg.ranges.heading and not self.cfg.heading_command:
             omni.log.warn(
                 f"The velocity command has the 'ranges.heading' attribute set to '{self.cfg.ranges.heading}'"
@@ -208,9 +205,8 @@ class UniformVelocityCommand(CommandTerm):
         zeros = torch.zeros_like(heading_angle)
         arrow_quat = math_utils.quat_from_euler_xyz(zeros, zeros, heading_angle)
         # convert everything back from base to world frame
-        base_quat_w = math_utils.yaw_quat(self.robot.data.root_quat_w)
-        arrow_quat = math_utils.quat_mul(math_utils.quat_inv(base_quat_w), arrow_quat)
-        # arrow_quat = math_utils.yaw_quat(arrow_quat)
+        base_quat_w = self.robot.data.root_quat_w
+        arrow_quat = math_utils.quat_mul(base_quat_w, arrow_quat)
 
         return arrow_scale, arrow_quat
 

@@ -141,28 +141,19 @@ class randomize_rigid_body_material(ManagerTermBase):
         # retrieve material buffer from the physics simulation
         materials = self.asset.root_physx_view.get_material_properties()
 
-    # update material buffer with new samples
-    if isinstance(asset, Articulation) and asset_cfg.body_ids != slice(None):
-        # obtain number of shapes per body (needed for indexing the material properties correctly)
-        # note: this is a workaround since the Articulation does not provide a direct way to obtain the number of shapes
-        #  per body. We use the physics simulation view to obtain the number of shapes per body.
-        num_shapes_per_body = []
-        for link_path in asset.root_physx_view.link_paths[0]:
-            link_physx_view = asset._physics_sim_view.create_rigid_body_view(link_path)  # type: ignore
-            num_shapes_per_body.append(link_physx_view.max_shapes)
-
-        # sample material properties from the given ranges
-        for body_id in asset_cfg.body_ids:
-            # start index of shape
-            start_idx = sum(num_shapes_per_body[:body_id])
-            # end index of shape
-            end_idx = start_idx + num_shapes_per_body[body_id]
-            # assign the new materials
-            # material ids are of shape: num_env_ids x num_shapes
-            # material_buckets are of shape: num_buckets x 3
-            materials[env_ids, start_idx:end_idx] = torch.from_numpy(material_samples[:, start_idx:end_idx]).to(dtype=torch.float)
-    else:
-        materials[env_ids] = torch.from_numpy(material_samples).to(dtype=torch.float)
+        # update material buffer with new samples
+        if self.num_shapes_per_body is not None:
+            # sample material properties from the given ranges
+            for body_id in self.asset_cfg.body_ids:
+                # obtain indices of shapes for the body
+                start_idx = sum(self.num_shapes_per_body[:body_id])
+                end_idx = start_idx + self.num_shapes_per_body[body_id]
+                # assign the new materials
+                # material samples are of shape: num_env_ids x total_num_shapes x 3
+                materials[env_ids, start_idx:end_idx] = material_samples[:, start_idx:end_idx]
+        else:
+            # assign all the materials
+            materials[env_ids] = material_samples[:]
 
         # apply to simulation
         self.asset.root_physx_view.set_material_properties(materials, env_ids)

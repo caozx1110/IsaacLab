@@ -71,6 +71,7 @@ class ArticulationData:
         self._joint_vel = TimestampedBuffer()
 
         self._prev_root_pos_w = self._root_physx_view.get_root_transforms()[:, :3].clone()
+        self._prev_root_quat_w = math_utils.convert_quat(self._root_physx_view.get_root_transforms()[:, 3:7], to="wxyz")
 
     def update(self, dt: float):
         # update the simulation timestamp
@@ -272,7 +273,12 @@ class ArticulationData:
         velocities are of the articulation root's center of mass frame.
         """
         if self._root_state_w.timestamp < self._sim_timestamp:
-            self._prev_root_pos_w = self._root_state_w.data[:, :3].clone()
+            if self._root_state_w.data is None:
+                self._prev_root_pos_w = self._root_physx_view.get_root_transforms()[:, :3].clone()
+                self._prev_root_quat_w = math_utils.convert_quat(self._root_physx_view.get_root_transforms()[:, 3:7], to="wxyz")
+            else:
+                self._prev_root_pos_w = self._root_state_w.data[:, :3].clone()
+                self._prev_root_quat_w = self._root_state_w.data[:, 3:7].clone()
             # read data from simulation
             pose = self._root_physx_view.get_root_transforms().clone()
             pose[:, 3:7] = math_utils.convert_quat(pose[:, 3:7], to="wxyz")
@@ -386,6 +392,14 @@ class ArticulationData:
         This quantity is the orientation of the actor frame of the articulation root.
         """
         return self.root_state_w[:, 3:7]
+
+    @property
+    def prev_root_quat_w(self) -> torch.Tensor:
+        """Previous root orientation (w, x, y, z) in simulation world frame. Shape is (num_instances, 4).
+
+        This quantity is the orientation of the actor frame of the articulation root at the previous time step.
+        """
+        return self._prev_root_quat_w
 
     @property
     def root_vel_w(self) -> torch.Tensor:

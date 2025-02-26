@@ -12,8 +12,9 @@ from typing import TYPE_CHECKING
 import omni.log
 
 import omni.isaac.lab.utils.string as string_utils
-from omni.isaac.lab.assets.articulation import Articulation
+from omni.isaac.lab.assets import Articulation, DeformableObject, RigidObject
 from omni.isaac.lab.managers.action_manager import ActionTerm
+from omni.isaac.lab.managers import SceneEntityCfg
 
 if TYPE_CHECKING:
     from omni.isaac.lab.envs import ManagerBasedEnv
@@ -56,15 +57,10 @@ class JointAction(ActionTerm):
         super().__init__(cfg, env)
 
         # resolve the joints over which the action term is applied
-        self._joint_ids, self._joint_names = self._asset.find_joints(
-            self.cfg.joint_names, preserve_order=self.cfg.preserve_order
-        )
+        self._joint_ids, self._joint_names = self._asset.find_joints(self.cfg.joint_names, preserve_order=self.cfg.preserve_order)
         self._num_joints = len(self._joint_ids)
         # log the resolved joint names for debugging
-        omni.log.info(
-            f"Resolved joint names for the action term {self.__class__.__name__}:"
-            f" {self._joint_names} [{self._joint_ids}]"
-        )
+        omni.log.info(f"Resolved joint names for the action term {self.__class__.__name__}:" f" {self._joint_names} [{self._joint_ids}]")
 
         # Avoid indexing across all joints for efficiency
         if self._num_joints == self._asset.num_joints:
@@ -141,6 +137,183 @@ class JointPositionAction(JointAction):
     def apply_actions(self):
         # set position targets
         self._asset.set_joint_position_target(self.processed_actions, joint_ids=self._joint_ids)
+
+
+class JointPositionBaseForceTorqueAction(JointAction):
+    """joint tar dof pos and base external force and torque"""
+
+    def __init__(self, cfg: actions_cfg.JointPositionBaseForceTorqueCfg, env: ManagerBasedEnv):
+        # initialize the action term
+        super().__init__(cfg, env)
+        # use default joint positions as offset
+        if cfg.use_default_offset:
+            self._offset = self._asset.data.default_joint_pos[:, self._joint_ids].clone()
+
+        self._force_limit = cfg.force_limit
+        self._torque_limit = cfg.torque_limit
+        self._force_scale = cfg.force_scale
+        self._torque_scale = cfg.torque_scale
+
+        self._body: RigidObject | Articulation = env.scene[cfg.body_cfg.name]
+        self._body_ids = cfg.body_cfg.body_ids
+
+        if not isinstance(self._body, (RigidObject, Articulation)):
+            raise ValueError(f"Unsupported body type: {type(self._body)}. Supported types are RigidObject and Articulation.")
+
+    @property
+    def action_dim(self) -> int:
+        return self._num_joints + 6
+
+    def process_actions(self, actions):
+        # store the raw actions
+        self._raw_actions[:] = actions
+        # apply the affine transformations
+        forces = self._raw_actions[:, self._num_joints : self._num_joints + 3] * self._force_scale
+        forces = torch.clamp(forces, -self._force_limit, self._force_limit)
+        torques = self._raw_actions[:, self._num_joints + 3 :] * self._torque_scale
+        torques = torch.clamp(torques, -self._torque_limit, self._torque_limit)
+
+        self._processed_actions = torch.cat(
+            [
+                self._raw_actions[:, : self._num_joints] * self._scale + self._offset,
+                forces,
+                torques,
+            ],
+        )
+
+    def reduce_limits(self, scale):
+        self._force_limit *= scale
+        self._torque_limit *= scale
+        if self._force_limit < 1:
+            self._force_limit = 0.0
+        if self._torque_limit < 1:
+            self._torque_limit = 0.0
+
+    def zero_limits(self):
+        self._force_limit = 0.0
+        self._torque_limit = 0.0
+
+    def apply_actions(self):
+        # set position targets
+        self._asset.set_joint_position_target(self.processed_actions[:, : self._num_joints], joint_ids=self._joint_ids)
+        # set base external force and torque
+        env_ids = torch.arange(self._env.num_envs, device=self.device)
+        forces = self.processed_actions[env_ids, self._num_joints : self._num_joints + 3]
+        torques = self.processed_actions[env_ids, self._num_joints + 3 :]
+        self._body.set_external_force_and_torque(forces, torques, body_ids=self._body_ids, env_ids=env_ids)
+
+
+class BaseForceTorqueAction(ActionTerm):
+    """Base external force and torque action term."""
+
+    cfg: actions_cfg.BaseForceTorqueActionCfg
+    """The configuration of the action term."""
+    _body: RigidObject | Articulation
+    """The body to which the external force and torque are applied."""
+    _body_ids: Sequence[int]
+    """The body IDs of the body to which the external force and torque are applied."""
+    _force_limit: float
+    """The limit of the external force."""
+    _torque_limit: float
+    """The limit of the external torque."""
+    _force_scale: float
+    """The scaling factor of the external force."""
+    _torque_scale: float
+    """The scaling factor of the external torque."""
+    _raw_actions: torch.Tensor
+    """The raw actions."""
+    _processed_actions: torch.Tensor
+    """The processed actions."""
+
+    def __init__(self, cfg: actions_cfg.BaseForceTorqueActionCfg, env: ManagerBasedEnv):
+        super().__init__(cfg, env)
+
+        self._force_limit = cfg.force_limit
+        self._torque_limit = cfg.torque_limit
+        self._force_scale = cfg.force_scale
+        self._torque_scale = cfg.torque_scale
+
+        cfg.body_cfg._resolve_body_names(env.scene)  # resolve the body names
+        self._body = env.scene[cfg.body_cfg.name]
+        self._body_ids = cfg.body_cfg.body_ids
+
+        if not isinstance(self._body, (RigidObject, Articulation)):
+            raise ValueError(f"Unsupported body type: {type(self._body)}. Supported types are RigidObject and Articulation.")
+
+        self._raw_actions = torch.zeros(self.num_envs, 6, device=self.device)
+        self._processed_actions = torch.zeros_like(self._raw_actions)
+
+    @property
+    def action_dim(self) -> int:
+        return 6
+
+    @property
+    def raw_actions(self) -> torch.Tensor:
+        return self._raw_actions
+
+    @property
+    def processed_actions(self) -> torch.Tensor:
+        return self._processed_actions
+
+    @property
+    def force_limit(self) -> float:
+        return self._force_limit
+
+    @property
+    def torque_limit(self) -> float:
+        return self._torque_limit
+
+    def process_actions(self, actions: torch.Tensor):
+        self._raw_actions[:] = actions
+        forces = self._raw_actions[:, :3] * self._force_scale
+        forces = torch.clamp(forces, -self._force_limit, self._force_limit)
+        torques = self._raw_actions[:, 3:] * self._torque_scale
+        torques = torch.clamp(torques, -self._torque_limit, self._torque_limit)
+
+        self._processed_actions = torch.cat([forces, torques], dim=1)
+
+    def apply_actions(self):
+        env_ids = torch.arange(self.num_envs, device=self.device)
+        forces = self.processed_actions[env_ids, :3]  # N x 3
+        torques = self.processed_actions[env_ids, 3:]  # N x 3
+        # N x body_length x 3, body_length = 1, TEMP
+        assert len(self._body_ids) == 1, "Only one body is supported for now."
+        # N x 3 -> N x 1 x 3
+        forces = forces.unsqueeze(1)
+        torques = torques.unsqueeze(1)
+
+        self._body.set_external_force_and_torque(forces, torques, body_ids=self._body_ids, env_ids=env_ids)
+
+    def reset(self, env_ids: Sequence[int] | None = None) -> None:
+        self._raw_actions[env_ids] = 0.0
+
+    def reduce_limits(self, scale: float) -> None:
+        self._force_limit *= scale
+        self._torque_limit *= scale
+        if self._force_limit < 1:
+            self._force_limit = 0.0
+        if self._torque_limit < 1:
+            self._torque_limit = 0.0
+
+    def reduce_force_limit(self, scale: float) -> None:
+        self._force_limit *= scale
+        if self._force_limit < 1:
+            self._force_limit = 0.0
+
+    def reduce_torque_limit(self, scale: float) -> None:
+        self._torque_limit *= scale
+        if self._torque_limit < 1:
+            self._torque_limit = 0.0
+
+    def increase_force_limit(self, scale: float) -> None:
+        self._force_limit *= scale
+
+    def increase_torque_limit(self, scale: float) -> None:
+        self._torque_limit *= scale
+
+    def zero_limits(self) -> None:
+        self._force_limit = 0.0
+        self._torque_limit = 0.0
 
 
 class RelativeJointPositionAction(JointAction):

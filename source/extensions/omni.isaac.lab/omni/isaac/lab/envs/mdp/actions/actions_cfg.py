@@ -7,6 +7,7 @@ from dataclasses import MISSING
 
 from omni.isaac.lab.controllers import DifferentialIKControllerCfg
 from omni.isaac.lab.managers.action_manager import ActionTerm, ActionTermCfg
+from omni.isaac.lab.managers import SceneEntityCfg
 from omni.isaac.lab.utils import configclass
 
 from . import binary_joint_actions, joint_actions, joint_actions_to_limits, non_holonomic_actions, task_space_actions
@@ -49,6 +50,52 @@ class JointPositionActionCfg(JointActionCfg):
     If True, this flag results in overwriting the values of :attr:`offset` to the default joint positions
     from the articulation asset.
     """
+
+
+@configclass
+class JointPositionBaseForceTorqueCfg(JointActionCfg):
+    """Configuration for the joint position action term.
+
+    See :class:`JointPositionAction` for more details.
+    """
+
+    class_type: type[ActionTerm] = joint_actions.JointPositionBaseForceTorqueAction
+
+    use_default_offset: bool = True
+    """Whether to use default joint positions configured in the articulation asset as offset.
+    Defaults to True.
+
+    If True, this flag results in overwriting the values of :attr:`offset` to the default joint positions
+    from the articulation asset.
+    """
+    body_cfg: SceneEntityCfg = MISSING
+    """The body configuration for the base force/torque action."""
+    force_limit: float = 100.0
+    """The force limit for the base force/torque action."""
+    torque_limit: float = 100.0
+    """The torque limit for the base force/torque action."""
+    force_scale: float = 1.0
+    """The scale factor for the force action."""
+    torque_scale: float = 1.0
+    """The scale factor for the torque action."""
+
+
+@configclass
+class BaseForceTorqueActionCfg(ActionTermCfg):
+    """Configuration for the base force/torque action term."""
+
+    class_type: type[ActionTerm] = joint_actions.BaseForceTorqueAction
+
+    body_cfg: SceneEntityCfg = MISSING
+    """The body configuration for the base force/torque action."""
+    force_limit: float = 100.0
+    """The force limit for the base force/torque action."""
+    torque_limit: float = 100.0
+    """The torque limit for the base force/torque action."""
+    force_scale: float = 1.0
+    """The scale factor for the force action."""
+    torque_scale: float = 1.0
+    """The scale factor for the torque action."""
 
 
 @configclass

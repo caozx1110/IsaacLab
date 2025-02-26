@@ -212,9 +212,9 @@ class BaseForceTorqueAction(ActionTerm):
     """The body to which the external force and torque are applied."""
     _body_ids: Sequence[int]
     """The body IDs of the body to which the external force and torque are applied."""
-    _force_limit: float
+    _force_limit: torch.Tensor
     """The limit of the external force."""
-    _torque_limit: float
+    _torque_limit: torch.Tensor
     """The limit of the external torque."""
     _force_scale: float
     """The scaling factor of the external force."""
@@ -228,8 +228,8 @@ class BaseForceTorqueAction(ActionTerm):
     def __init__(self, cfg: actions_cfg.BaseForceTorqueActionCfg, env: ManagerBasedEnv):
         super().__init__(cfg, env)
 
-        self._force_limit = cfg.force_limit
-        self._torque_limit = cfg.torque_limit
+        self._force_limit = cfg.force_limit * torch.ones(self.num_envs, device=self.device)
+        self._torque_limit = cfg.torque_limit * torch.ones(self.num_envs, device=self.device)
         self._force_scale = cfg.force_scale
         self._torque_scale = cfg.torque_scale
 
@@ -256,19 +256,21 @@ class BaseForceTorqueAction(ActionTerm):
         return self._processed_actions
 
     @property
-    def force_limit(self) -> float:
+    def force_limit(self) -> torch.Tensor:
         return self._force_limit
 
     @property
-    def torque_limit(self) -> float:
+    def torque_limit(self) -> torch.Tensor:
         return self._torque_limit
 
     def process_actions(self, actions: torch.Tensor):
         self._raw_actions[:] = actions
+        _force_limit = self._force_limit.unsqueeze(1)
+        _torque_limit = self._torque_limit.unsqueeze(1)
         forces = self._raw_actions[:, :3] * self._force_scale
-        forces = torch.clamp(forces, -self._force_limit, self._force_limit)
+        forces = torch.clamp(forces, -_force_limit, _force_limit)
         torques = self._raw_actions[:, 3:] * self._torque_scale
-        torques = torch.clamp(torques, -self._torque_limit, self._torque_limit)
+        torques = torch.clamp(torques, -_torque_limit, _torque_limit)
 
         self._processed_actions = torch.cat([forces, torques], dim=1)
 
@@ -287,33 +289,21 @@ class BaseForceTorqueAction(ActionTerm):
     def reset(self, env_ids: Sequence[int] | None = None) -> None:
         self._raw_actions[env_ids] = 0.0
 
-    def reduce_limits(self, scale: float) -> None:
-        self._force_limit *= scale
-        self._torque_limit *= scale
-        if self._force_limit < 1:
-            self._force_limit = 0.0
-        if self._torque_limit < 1:
-            self._torque_limit = 0.0
+    def update_force_limit(self, env_ids: Sequence[int], scale: float) -> None:
+        _delta_force_limit = self._force_limit[env_ids] * (scale - 1)
+        # abs(delta) must > 5, if scale > 1, then delta > 5, if scale < 1, then delta < -5
+        _delta_force_limit = torch.clamp(_delta_force_limit, 5, float('inf')) if scale > 1 else torch.clamp(_delta_force_limit, float('-inf'), -5)
+        self._force_limit[env_ids] += _delta_force_limit
 
-    def reduce_force_limit(self, scale: float) -> None:
-        self._force_limit *= scale
-        if self._force_limit < 1:
-            self._force_limit = 0.0
+        self._force_limit[self._force_limit < 5] = 0.0
 
-    def reduce_torque_limit(self, scale: float) -> None:
-        self._torque_limit *= scale
-        if self._torque_limit < 1:
-            self._torque_limit = 0.0
+    def update_torque_limit(self, env_ids: Sequence[int], scale: float) -> None:
+        _delta_torque_limit = self._torque_limit[env_ids] * (scale - 1)
+        # abs(delta) must > 5, if scale > 1, then delta > 5, if scale < 1, then delta < -5
+        _delta_torque_limit = torch.clamp(_delta_torque_limit, 5, float('inf')) if scale > 1 else torch.clamp(_delta_torque_limit, float('-inf'), -5)
+        self._torque_limit[env_ids] += _delta_torque_limit
 
-    def increase_force_limit(self, scale: float) -> None:
-        self._force_limit *= scale
-
-    def increase_torque_limit(self, scale: float) -> None:
-        self._torque_limit *= scale
-
-    def zero_limits(self) -> None:
-        self._force_limit = 0.0
-        self._torque_limit = 0.0
+        self._torque_limit[self._torque_limit < 5] = 0.0
 
 
 class RelativeJointPositionAction(JointAction):

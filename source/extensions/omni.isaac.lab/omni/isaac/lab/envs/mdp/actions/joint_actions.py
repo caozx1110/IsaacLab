@@ -230,6 +230,8 @@ class BaseForceTorqueAction(ActionTerm):
 
         self._force_limit = cfg.force_limit * torch.ones(self.num_envs, device=self.device)
         self._torque_limit = cfg.torque_limit * torch.ones(self.num_envs, device=self.device)
+        self._max_force_limit = cfg.force_limit
+        self._max_torque_limit = cfg.torque_limit
         self._force_scale = cfg.force_scale
         self._torque_scale = cfg.torque_scale
 
@@ -304,6 +306,14 @@ class BaseForceTorqueAction(ActionTerm):
         self._torque_limit[env_ids] += _delta_torque_limit
 
         self._torque_limit[self._torque_limit < 5] = 0.0
+
+    def add_force_limit(self, env_ids: Sequence[int], add: float) -> None:
+        self._force_limit[env_ids] += add
+        self._force_limit[env_ids] = torch.clamp(self._force_limit[env_ids], 0, self._max_force_limit)
+
+    def add_torque_limit(self, env_ids: Sequence[int], add: float) -> None:
+        self._torque_limit[env_ids] += add
+        self._torque_limit[env_ids] = torch.clamp(self._torque_limit[env_ids], 0, self._max_torque_limit)
 
 
 class RelativeJointPositionAction(JointAction):
